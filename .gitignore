@@ -5,3 +5,8 @@ output
 raw_clips
 shorts_output
 __pycache__
+.env
+processed_clips.json
+gdrive_token.json
+oauth-client-id-twitch-clips.json
+venv

@@ -59,6 +59,9 @@ def crop_video_for_shorts(input_path: Path, output_path: Path, x_offset: int = 0
             "ffmpeg",
             "-i", str(input_path),
             "-vf", crop_filter,
+            "-c:v", "libx264",  # Use H.264 codec
+            "-crf", "18",  # High quality (lower = better, 18 is visually lossless)
+            "-preset", "medium",  # Balance between speed and compression
             "-c:a", "copy",  # Copy audio without re-encoding
             "-y",  # Overwrite output
             str(output_path)
@@ -69,7 +72,18 @@ def crop_video_for_shorts(input_path: Path, output_path: Path, x_offset: int = 0
         print(f"  Cropped:  {crop_width}x{crop_height} at offset ({x_offset}, {y_offset})")
 
         subprocess.run(cmd, check=True, capture_output=True)
-        print(f"  Saved to: {output_path}")
+
+        # Validate output file
+        if not output_path.exists():
+            print(f"  Error: Output file was not created")
+            return False
+
+        output_size = output_path.stat().st_size
+        if output_size < 10000:  # Less than 10KB is suspicious
+            print(f"  Error: Output file too small ({output_size} bytes), likely corrupted")
+            return False
+
+        print(f"  Saved to: {output_path} ({output_size / 1024 / 1024:.1f} MB)")
         return True
 
     except subprocess.CalledProcessError as e:
