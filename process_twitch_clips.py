@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+from google.auth.exceptions import RefreshError
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
@@ -43,8 +44,16 @@ def get_drive_service():
     # Refresh or get new token
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
+            try:
+                creds.refresh(Request())
+            except RefreshError as err:
+                # Handle revoked/expired refresh tokens by forcing a new OAuth flow.
+                print(f"Stored Google token refresh failed ({err}); re-authenticating...")
+                creds = None
+                if TOKEN_FILE.exists():
+                    TOKEN_FILE.unlink()
+
+        if not creds or not creds.valid:
             client_secrets_file = os.getenv("GOOGLE_CLIENT_SECRETS_FILE")
             if not client_secrets_file:
                 raise ValueError("GOOGLE_CLIENT_SECRETS_FILE must be set in .env")
